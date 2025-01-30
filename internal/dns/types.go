@@ -1,5 +1,7 @@
 package dns
 
+import "time"
+
 type QueryType uint16
 
 const (

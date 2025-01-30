@@ -1,13 +1,20 @@
+// internal/dns/analyzer.go
 package dns
 
 import (
     "context"
+    "fmt"
     "strings"
     "sync"
     "time"
     
     "github.com/miekg/dns"
     "github.com/DarkStalkr/LinkTracer2.0/pkg/similarity"
+)
+
+const (
+    errEmptyDomain = "empty domain name"
+    errInvalidDomain = "invalid domain name"
 )
 
 type Analyzer struct {
@@ -66,6 +73,16 @@ func (a *Analyzer) cacheResult(domain string, result *AnalysisResult) {
 }
 
 func (a *Analyzer) Analyze(ctx context.Context, domain string, targetDomain string) (*AnalysisResult, error) {
+    // Validate input
+    if domain == "" {
+        return nil, fmt.Errorf(errEmptyDomain)
+    }
+
+    // Basic domain validation (simple check for now)
+    if !isValidDomain(domain) {
+        return nil, fmt.Errorf(errInvalidDomain)
+    }
+
     // Check cache first
     if a.config.CacheEnabled {
         if result, ok := a.checkCache(domain); ok {
@@ -154,3 +171,46 @@ func (a *Analyzer) queryRecords(ctx context.Context, domain string, qtype QueryT
     results <- records
 }
 
+func isValidDomain(domain string) bool {
+    // Check length constraints
+    if len(domain) == 0 || len(domain) > 255 {
+        return false
+    }
+
+    // Split into labels
+    labels := strings.Split(domain, ".")
+    
+    // A valid domain must have at least two parts (name and TLD)
+    if len(labels) < 2 {
+        return false
+    }
+
+    // Check each label
+    for _, label := range labels {
+        // Label length constraints
+        if len(label) == 0 || len(label) > 63 {
+            return false
+        }
+
+        // Label must not start or end with hyphen
+        if strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+            return false
+        }
+
+        // Check each character in the label
+        for _, c := range label {
+            if !isValidDomainChar(c) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
+
+func isValidDomainChar(c rune) bool {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           (c >= '0' && c <= '9') ||
+           c == '-' // Dot is handled in label splitting
+}
