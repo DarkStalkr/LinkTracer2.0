@@ -2,6 +2,7 @@ package dns
 
 import (
     "context"
+    "strings"
     "sync"
     "time"
     
@@ -39,6 +40,28 @@ func NewAnalyzer(config *Config) *Analyzer {
         cache: &Cache{
             items: make(map[string]CacheItem),
         },
+    }
+}
+
+func (a *Analyzer) checkCache(domain string) (*AnalysisResult, bool) {
+    a.cache.mu.RLock()
+    defer a.cache.mu.RUnlock()
+
+    item, exists := a.cache.items[domain]
+    if !exists || time.Now().After(item.ExpiresAt) {
+        return nil, false
+    }
+
+    return &item.Result, true
+}
+
+func (a *Analyzer) cacheResult(domain string, result *AnalysisResult) {
+    a.cache.mu.Lock()
+    defer a.cache.mu.Unlock()
+
+    a.cache.items[domain] = CacheItem{
+        Result:    *result,
+        ExpiresAt: time.Now().Add(a.config.CacheTTL),
     }
 }
 
