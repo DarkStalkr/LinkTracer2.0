@@ -14,4 +14,13 @@
     Historical DNS data analysis
     Domain age verification
 
+### SSL Certificate Analysis
 
+- Certificate chain verification
+- Issuer reputation check
+- Certificate age analysis
+- Common phishing patterns
+
+### WHOIS Information Module
+
+- Domain Registration Analysis
